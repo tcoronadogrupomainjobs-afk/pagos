@@ -1,7 +1,7 @@
 // ==================== API CONFIGURATION ====================
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8787'
-    : 'https://pagos-api.tcoronadogrupomainjobs.workers.dev';
+    : 'https://lively-mountain-fd1e.tcoronadogrupomainjobs.workers.dev';
 
 async function api(path, options = {}) {
     const url = API_BASE + path;
