@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Pagos - Tarjetas de Crédito</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <img src="mainjobs.png" alt="Logo" class="header-logo">
+            <div class="header-text">
+                <h1>Control de Pagos con Tarjeta de Crédito</h1>
+                <p>Gestión de pagos de trabajadores de la empresa</p>
+            </div>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" data-tab="registro"><i class="fas fa-table"></i> Registro de Pagos</button>
+        <button class="tab-btn" data-tab="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
+    </nav>
+
+    <main class="container">
+        <!-- Tab: Registro de Pagos -->
+        <section id="registro" class="tab-content active">
+            <div class="form-card">
+                <h2><i class="fas fa-plus-circle"></i> Nuevo Registro de Pago</h2>
+                <form id="paymentForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="fecha"><i class="fas fa-calendar-alt"></i> Fecha de la compra *</label>
+                            <input type="date" id="fecha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="concepto"><i class="fas fa-tag"></i> Concepto *</label>
+                            <input type="text" id="concepto" placeholder="Ej: Pasaje aéreo Madrid" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="proyecto"><i class="fas fa-project-diagram"></i> Proyecto</label>
+                            <div class="editable-select">
+                                <select id="proyecto">
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                                <button type="button" class="btn-add-option" onclick="addNewOption('proyecto')" title="Añadir nuevo proyecto"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="evento"><i class="fas fa-calendar-check"></i> Evento</label>
+                            <div class="editable-select">
+                                <select id="evento">
+                                    <option value="">Ninguno</option>
+                                </select>
+                                <button type="button" class="btn-add-option" onclick="addNewOption('evento')" title="Añadir nuevo evento"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tipoPago"><i class="fas fa-credit-card"></i> Tipo de Pago *</label>
+                            <div class="editable-select">
+                                <select id="tipoPago" required>
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                                <button type="button" class="btn-add-option" onclick="addNewOption('tipoPago')" title="Añadir nuevo tipo"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tarjeta"><i class="fas fa-money-check-alt"></i> Tarjeta de Pago *</label>
+                            <div class="editable-select">
+                                <select id="tarjeta" required>
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                                <button type="button" class="btn-add-option" onclick="addNewOption('tarjeta')" title="Añadir nueva tarjeta"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="cantidad"><i class="fas fa-euro-sign"></i> Cantidad (€) *</label>
+                            <input type="number" id="cantidad" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="encargado"><i class="fas fa-user"></i> Encargado por *</label>
+                            <div class="editable-select">
+                                <select id="encargado" required>
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                                <button type="button" class="btn-add-option" onclick="addNewOption('encargado')" title="Añadir nuevo trabajador"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label for="observaciones"><i class="fas fa-sticky-note"></i> Observaciones</label>
+                            <textarea id="observaciones" rows="2" placeholder="Notas adicionales sobre el pago..."></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fas fa-save"></i> Guardar Registro</button>
+                        <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display:none;"><i class="fas fa-times"></i> Cancelar Edición</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Resumen rápido -->
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <h3><i class="fas fa-list-ol"></i> Total Registros</h3>
+                    <p id="totalRegistros">0</p>
+                </div>
+                <div class="summary-card">
+                    <h3><i class="fas fa-coins"></i> Total Cantidad</h3>
+                    <p id="totalCantidad">€0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h3><i class="fas fa-receipt"></i> Ticket Medio</h3>
+                    <p id="ticketMedio">€0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h3><i class="fas fa-calendar-check"></i> Eventos</h3>
+                    <p id="totalEventos">0</p>
+                </div>
+                </div>
+            </div>
+
+            <!-- Tabla de registros -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h2><i class="fas fa-table"></i> Registros Guardados</h2>
+                    <div class="table-actions">
+                        <div class="search-wrapper">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="searchInput" placeholder="Buscar registros..." class="search-input">
+                        </div>
+                        <button class="btn btn-warning" onclick="openImportModal()"><i class="fas fa-file-import"></i> Importar Excel</button>
+                        <button class="btn btn-success" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn btn-primary" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <div class="dropdown-backup">
+                            <button class="btn btn-dark" onclick="toggleBackupMenu()"><i class="fas fa-database"></i> Datos <i class="fas fa-caret-down"></i></button>
+                            <div id="backupMenu" class="dropdown-backup-menu" style="display:none;">
+                                <a href="#" onclick="backupData(); return false;"><i class="fas fa-download"></i> Guardar backup JSON</a>
+                                <a href="#" onclick="document.getElementById('restoreFileInput').click(); return false;"><i class="fas fa-upload"></i> Restaurar backup JSON</a>
+                                <a href="#" onclick="exportAllData(); return false;"><i class="fas fa-file-export"></i> Exportar todo (JSON)</a>
+                            </div>
+                        </div>
+                        <input type="file" id="restoreFileInput" accept=".json" onchange="restoreData(event)" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- Filtros de registros -->
+                <div class="inline-filters">
+                    <div class="inline-filters-grid">
+                        <div class="filter-group">
+                            <label for="regFilterFechaDesde"><i class="fas fa-calendar"></i> Desde</label>
+                            <input type="date" id="regFilterFechaDesde">
+                        </div>
+                        <div class="filter-group">
+                            <label for="regFilterFechaHasta"><i class="fas fa-calendar"></i> Hasta</label>
+                            <input type="date" id="regFilterFechaHasta">
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-credit-card"></i> Tipo</label>
+                            <div class="multi-select" id="regFilterTipoPago_ms" data-field="tipoPago"></div>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-money-check-alt"></i> Tarjeta</label>
+                            <div class="multi-select" id="regFilterTarjeta_ms" data-field="tarjeta"></div>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-user"></i> Encargado</label>
+                            <div class="multi-select" id="regFilterEncargado_ms" data-field="encargado"></div>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-project-diagram"></i> Proyecto</label>
+                            <div class="multi-select" id="regFilterProyecto_ms" data-field="proyecto"></div>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-calendar-check"></i> Evento</label>
+                            <div class="multi-select" id="regFilterEvento_ms" data-field="evento"></div>
+                        </div>
+                        <div class="filter-group inline-filter-actions">
+                            <button class="btn btn-primary btn-sm" onclick="applyRegFilters()"><i class="fas fa-filter"></i> Filtrar</button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearRegFilters()"><i class="fas fa-eraser"></i> Limpiar</button>
+                        </div>
+                    </div>
+                    <div id="regFilterStatus" class="filter-status" style="display:none;">
+                        <span><i class="fas fa-info-circle"></i> Mostrando <strong id="regFilteredCount">0</strong> de <strong id="regTotalCount">0</strong> registros</span>
+                        <button class="btn btn-sm btn-secondary" onclick="clearRegFilters()"><i class="fas fa-times"></i> Quitar filtro</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="paymentsTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('num')">Nº <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('fecha')">Fecha <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('concepto')">Concepto <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('proyecto')">Proyecto <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('evento')">Evento <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('tipoPago')">Tipo de Pago <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('tarjeta')">Tarjeta <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('cantidad')">Cantidad (€) <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('encargado')">Encargado por <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortTable('observaciones')">Observaciones <i class="fas fa-sort"></i></th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer" id="tableFooter">
+                    <p id="noDataMsg">No hay registros guardados aún.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Dashboard -->
+        <section id="dashboard" class="tab-content">
+            <!-- Encabezado solo visible en impresión -->
+            <div class="print-header">
+                <h1>Control de Pagos con Tarjeta de Crédito</h1>
+                <p>Dashboard de Análisis | Fecha de impresión: <span id="printDate"></span></p>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters-card">
+                <h2><i class="fas fa-filter"></i> Filtros de Análisis</h2>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="filterFechaDesde"><i class="fas fa-calendar"></i> Fecha Desde</label>
+                        <input type="date" id="filterFechaDesde">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterFechaHasta"><i class="fas fa-calendar"></i> Fecha Hasta</label>
+                        <input type="date" id="filterFechaHasta">
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-credit-card"></i> Tipo de Pago</label>
+                        <div class="multi-select" id="filterTipoPago_ms" data-field="tipoPago"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-money-check-alt"></i> Tarjeta</label>
+                        <div class="multi-select" id="filterTarjeta_ms" data-field="tarjeta"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-user"></i> Encargado</label>
+                        <div class="multi-select" id="filterEncargado_ms" data-field="encargado"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-project-diagram"></i> Proyecto</label>
+                        <div class="multi-select" id="filterProyecto_ms" data-field="proyecto"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-check"></i> Evento</label>
+                        <div class="multi-select" id="filterEvento_ms" data-field="evento"></div>
+                    </div>
+                    <div class="filter-group filter-actions">
+                        <button class="btn btn-primary" onclick="applyFilters()"><i class="fas fa-search"></i> Aplicar</button>
+                        <button class="btn btn-secondary" onclick="clearFilters()"><i class="fas fa-eraser"></i> Limpiar</button>
+                        <button class="btn btn-dark" onclick="printDashboard()"><i class="fas fa-print"></i> Imprimir</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard KPIs -->
+            <div class="dashboard-kpis">
+                <div class="kpi-card">
+                    <h3><i class="fas fa-calculator"></i> Total Filtrado</h3>
+                    <p id="dashTotal" class="kpi-value">€0.00</p>
+                </div>
+                <div class="kpi-card">
+                    <h3><i class="fas fa-hashtag"></i> Registros Filtrados</h3>
+                    <p id="dashCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3><i class="fas fa-arrow-up"></i> Mayor Pago</h3>
+                    <p id="dashMax" class="kpi-value">€0.00</p>
+                </div>
+                <div class="kpi-card">
+                    <h3><i class="fas fa-arrow-down"></i> Menor Pago</h3>
+                    <p id="dashMin" class="kpi-value">€0.00</p>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> Gastos por Tipo de Pago</h3>
+                    <canvas id="chartTipoPago"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-users"></i> Gastos por Trabajador</h3>
+                    <canvas id="chartEncargado"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-credit-card"></i> Gastos por Tarjeta</h3>
+                    <canvas id="chartTarjeta"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-project-diagram"></i> Gastos por Proyecto</h3>
+                    <canvas id="chartProyecto"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-calendar-check"></i> Gastos por Evento</h3>
+                    <canvas id="chartEvento"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-line"></i> Evolución Mensual</h3>
+                    <canvas id="chartMensual"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabla resumen dashboard -->
+            <div class="table-card">
+                <h2><i class="fas fa-clipboard-list"></i> Detalle Filtrado</h2>
+                <div class="table-container">
+                    <table id="dashboardTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortDash('fecha')">Fecha <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('concepto')">Concepto <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('proyecto')">Proyecto <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('evento')">Evento <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('tipoPago')">Tipo de Pago <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('tarjeta')">Tarjeta <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('cantidad')">Cantidad (€) <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('encargado')">Encargado por <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="sortDash('observaciones')">Observaciones <i class="fas fa-sort"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <p id="noDashDataMsg">No hay datos para los filtros seleccionados.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal para añadir opciones -->
+    <div id="optionModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3 id="modalTitle"><i class="fas fa-plus-circle"></i> Añadir Nuevo Elemento</h3>
+            <input type="text" id="newOptionInput" placeholder="Escribe el nuevo valor...">
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="saveNewOption()"><i class="fas fa-check"></i> Guardar</button>
+                <button class="btn btn-secondary" onclick="closeModal()"><i class="fas fa-times"></i> Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de importación Excel -->
+    <div id="importModal" class="modal" style="display:none;">
+        <div class="modal-content modal-import">
+            <h3><i class="fas fa-file-import"></i> Importar datos desde Excel</h3>
+            <p class="import-hint"><i class="fas fa-info-circle"></i> Selecciona un archivo .xlsx o .xls</p>
+            <label for="importFileInput" class="file-upload-label">
+                <i class="fas fa-cloud-upload-alt"></i> Seleccionar archivo...
+            </label>
+            <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" onchange="handleFileImport(event)">
+            <div id="importPreview" style="display:none;">
+                <h4><i class="fas fa-eye"></i> Vista previa (<span id="importCount">0</span> registros encontrados)</h4>
+                <div class="table-container">
+                    <table id="importPreviewTable">
+                        <thead id="importPreviewHead"></thead>
+                        <tbody id="importPreviewBody"></tbody>
+                    </table>
+                </div>
+                <div class="import-mapping">
+                    <h4><i class="fas fa-columns"></i> Mapeo de columnas</h4>
+                    <div class="mapping-grid">
+                        <div class="mapping-item">
+                            <label><i class="fas fa-calendar"></i> Fecha:</label>
+                            <select id="mapFecha"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-tag"></i> Concepto:</label>
+                            <select id="mapConcepto"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-project-diagram"></i> Proyecto:</label>
+                            <select id="mapProyecto"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-calendar-check"></i> Evento:</label>
+                            <select id="mapEvento"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-credit-card"></i> Tipo de Pago:</label>
+                            <select id="mapTipoPago"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-money-check-alt"></i> Tarjeta:</label>
+                            <select id="mapTarjeta"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-euro-sign"></i> Cantidad:</label>
+                            <select id="mapCantidad"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-user"></i> Encargado por:</label>
+                            <select id="mapEncargado"></select>
+                        </div>
+                        <div class="mapping-item">
+                            <label><i class="fas fa-sticky-note"></i> Observaciones:</label>
+                            <select id="mapObservaciones"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="confirmImportBtn" onclick="confirmImport()" style="display:none;"><i class="fas fa-file-import"></i> Importar Datos</button>
+                <button class="btn btn-secondary" onclick="closeImportModal()"><i class="fas fa-times"></i> Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
